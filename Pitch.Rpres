@@ -1,0 +1,116 @@
+Coursera - Developing Data Products - Project
+========================================================
+author: stern0phant
+date: 2016-06-28
+autosize: true
+
+Summary
+========================================================
+
+- This presentation introduces a simple shiny-app plotting (adjusted) close prices of stocks with or without a trend line
+- It was created as course project for the Developing Data Products course on Coursera
+- You will find the related Github repository [here](https://github.com/sternophant/ddp_project)
+
+
+Example stock chart
+========================================================
+
+- The app produces stock charts like this example for Ford (symbol: F)
+- The trend line is in the app optional
+
+```{r, cache = TRUE, echo= FALSE, fig.height= 10, fig.width= 20}
+library(ggplot2)
+library(quantmod)
+
+## Retrieve stock price data
+data_stock <- getSymbols("F", auto.assign = FALSE)
+data_stock <- data.frame(date = time(data_stock), adjusted_value = data_stock[ , 6])
+data_stock <- data.frame(date = data_stock$date, adjusted_value = data_stock[ , 2])
+
+## Create plot
+ggplot(data = data_stock, aes(x = date, y = adjusted_value)) + 
+       geom_line(colour = "blue") + 
+       labs(title = paste("Symbol:", "F"), x = "", y="Adjusted Close Pirce [USD]") +
+       geom_smooth()
+```
+
+ui.R
+========================================================
+
+```{r, echo=TRUE, eval=FALSE}
+library(shiny)
+
+# Define UI for application that draws a histogram
+shinyUI(fluidPage(
+  
+  # Application title
+  titlePanel("Stock chart"),
+  
+  # Sidebar with a slider input for number of bins 
+  sidebarLayout(
+    sidebarPanel(
+      
+      tags$p("This is simple shiny-app plotting (adjusted) close prices of stocks with or without a trend line.
+             It was created as course project for the Developing Data Products course on Coursera. 
+             Please enter a valid symbol below."),
+      
+      tags$p("Symbol examples: F (Ford), AAPL (Apple), ^GSPC (S&P 500)."),
+      
+      tags$hr(),
+      
+       textInput("symbol",
+                 "Symbol:",
+                  value = 'F'),
+       
+       checkboxInput("trend",
+                     "Trend", 
+                     value = TRUE)
+    ),
+    
+    # Show a plot of the generated distribution
+    mainPanel(
+       plotOutput("stock_plot")
+    )
+  )
+))
+
+```
+
+server.R
+========================================================
+
+```{r, echo=TRUE, eval=FALSE}
+library(shiny)
+library(ggplot2)
+library(quantmod)
+library(mgcv)
+
+# Define server logic
+shinyServer(function(input, output) {
+  
+  data_stock <- reactive({
+    data_stock <- getSymbols(input$symbol, auto.assign = FALSE)
+    data_stock <- data.frame(date = time(data_stock), adjusted_value = data_stock[ , 6])
+    data_stock <- data.frame(date = data_stock$date, adjusted_value = data_stock[ , 2])
+  })
+  
+  plot <- reactive({
+    plot <- ggplot(data = data_stock(), aes(x = date, y = adjusted_value)) + 
+      geom_line(colour = "blue") + 
+      labs(title = paste("Symbol:", input$symbol)
+           , x = "", y="Adjusted Close Pirce [USD]")
+  })
+  
+  output$stock_plot <- renderPlot({
+    if (input$trend == TRUE) {
+      plot <- plot() + geom_smooth()
+    } else{
+      plot <- plot()
+    }
+    
+    plot
+    
+  })
+  
+})
+```
